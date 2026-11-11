@@ -166,6 +166,18 @@ h1,h2,h3,p{margin:0}
 .photo .pbtns a{background:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:800;text-decoration:none;color:var(--ink);box-shadow:var(--shadow-s)}
 .photo .pbtns a.pri{background:var(--coral-ink);color:#fff}
 .photo .pbtns a:hover{background:var(--ink);color:#fff}
+.photo .track{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.photo .track::-webkit-scrollbar{display:none}
+.photo .sl{position:relative;flex:0 0 100%;margin:0;scroll-snap-align:start;height:100%}
+.photo .sl img{width:100%;height:100%;object-fit:cover;display:block}
+.photo .sl figcaption{position:absolute;left:8px;top:8px;max-width:calc(100% - 64px);padding:2px 8px;border-radius:8px;font-size:10.5px;font-weight:700;color:#fff;background:rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo .sl figcaption a{color:#fff}
+.photo .nav{position:absolute;top:50%;translate:0 -50%;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.92);box-shadow:var(--shadow-s);display:flex;align-items:center;justify-content:center;z-index:2}
+.photo .nav:hover{background:var(--ink);color:#fff}
+.photo .nav.pv{left:8px}.photo .nav.nx{right:8px}
+.photo .count{position:absolute;right:10px;bottom:12px;z-index:2;font-size:11.5px;font-weight:800;color:#fff;background:rgba(0,0,0,.5);border-radius:999px;padding:1px 8px}
+.photo.car{height:168px}
+.photo.car .pbtns{z-index:2;right:56px}
 .fbody{padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
 .fhead{display:flex;gap:10px;align-items:flex-start}
 .fhead>div{flex:1;min-width:0}
@@ -268,6 +280,7 @@ h1,h2,h3,p{margin:0}
   .dscroll{padding:0 14px 18px}
   .frow2{grid-template-columns:1fr}
   .photo{height:104px}
+  .photo.car{height:140px}
   .fbody{padding:12px 14px 16px;gap:10px}
 }
 @media (prefers-reduced-motion:reduce){.drawer,.drawer.open,.pin button{transition:none}#arcs3d g.grow path{animation:none}}
@@ -453,8 +466,59 @@ var D=[
  {id:11132,pais:'Turquía',iso:'792',code:'TR ISTANBU46',uni:'Uskudar University',lab:'Estambul · Uskudar',ciudad:'Estambul',ll:[29.0440,41.0230],plazas:2,meses:5,langs:[['R','B1','Inglés'],['R','B1','Turco']],join:'o',obs:[],coord:CAPA,web:'https://uskudar.edu.tr/'}
 ];
 
-/* Fotos: id de plaza → {src, credit, href}. Vacío hasta poder descargarlas. */
+/* Fotos: se buscan en Wikimedia Commons (licencia libre) al abrir cada ficha.
+   Por destino: [búsqueda de la universidad, búsqueda de la ciudad como reserva] */
 var PHOTOS={};
+var FQ={5752:['Technische Universität Graz','Graz Altstadt'],9894:['UC Leuven-Limburg','Leuven'],5139:['University of Ruse','Ruse Bulgaria'],10241:['Technical University of Varna','Varna Bulgaria'],10991:['Berner Fachhochschule','Bern Altstadt'],11061:['Technische Hochschule Köln','Köln'],6319:['Duale Hochschule Baden-Württemberg Mannheim','Mannheim'],6090:['3iL Limoges','Limoges'],6257:['Epitech','Paris'],6141:['Università della Calabria','Cosenza'],4795:['Università del Salento','Lecce'],5256:['Università degli Studi di Napoli Federico II','Napoli'],6009:['Università degli Studi di Salerno','Salerno'],4998:['Universitetet i Stavanger','Stavanger'],10972:['Avans Hogeschool Breda','Breda'],10654:['Hogeschool Rotterdam','Rotterdam'],5499:['Universidade da Beira Interior','Covilhã'],11019:['Universidade de Évora','Évora'],6330:['Universidade do Algarve','Faro Portugal'],9014:['ISCTE Lisboa','Lisboa'],5140:['Uniwersytet Śląski w Katowicach','Katowice'],11163:['Uczelnia Państwowa Sanok','Sanok'],5518:['Politechnika Wrocławska','Wrocław'],9026:['LAB-ammattikorkeakoulu','Lahti'],10059:['Žilinská univerzita','Žilina'],10801:['İstanbul Gelişim Üniversitesi','Istanbul'],11249:['Fatih Sultan Mehmet Vakıf Üniversitesi','Istanbul'],11132:['Üsküdar Üniversitesi','Üsküdar Istanbul']};
+var PHC={};
+function plain(h){try{return (new DOMParser().parseFromString(String(h||''),'text/html').body.textContent||'').replace(/\s+/g,' ').trim().slice(0,40);}catch(e){return '';}}
+function commons(q){
+  var u='https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=15&gsrsearch='+encodeURIComponent(q+' filetype:bitmap')+'&prop=imageinfo&iiprop=url|extmetadata|size|mime&iiurlwidth=800&iiextmetadatafilter=Artist|LicenseShortName';
+  return fetch(u).then(function(r){return r.json();}).then(function(j){
+    var pg=j&&j.query&&j.query.pages?Object.keys(j.query.pages).map(function(k){return j.query.pages[k];}):[];
+    pg.sort(function(a,b){return (a.index||0)-(b.index||0);});
+    return pg.map(function(x){
+      var i=x.imageinfo&&x.imageinfo[0];
+      if(!i||!i.thumburl||i.mime!=='image/jpeg'||i.width<700||i.width<i.height*1.1)return null;
+      if(/logo|wappen|coat|seal|siegel|map|karte|plan|diagram|schema|portrait|flag/i.test(x.title))return null;
+      var m=i.extmetadata||{};
+      return {src:i.thumburl,href:i.descriptionurl,by:plain(m.Artist&&m.Artist.value),lic:plain(m.LicenseShortName&&m.LicenseShortName.value)};
+    }).filter(Boolean);
+  });
+}
+function loadPhotos(d){
+  if(PHC[d.id])return PHC[d.id];
+  var q=FQ[d.id];
+  if(!q||!window.fetch)return (PHC[d.id]=Promise.resolve([]));
+  return (PHC[d.id]=commons(q[0]).then(function(a){
+    if(a.length>=3)return a.slice(0,3);
+    return commons(q[1]).then(function(b){b.forEach(function(x){x.city=1;});return a.concat(b).slice(0,3);},function(){return a;});
+  }).catch(function(){return [];}));
+}
+function showPhotos(d,list){
+  var ph=$bubble.querySelector('.photo');
+  if(!ph||!list.length||S.sel!==d.id)return;
+  var art=ph.querySelector('svg.art');if(art)art.remove();
+  ph.classList.add('car');
+  var t=document.createElement('div');t.className='track';
+  t.innerHTML=list.map(function(x){
+    return '<figure class="sl"><img src="'+esc(x.src)+'" alt="'+esc(x.city?d.ciudad:d.uni)+'" loading="lazy" referrerpolicy="no-referrer"><figcaption>'+(x.city?esc(d.ciudad)+' · ':'')+'<a href="'+esc(x.href)+'" target="_blank" rel="noopener">'+esc(x.by||'Wikimedia Commons')+(x.lic?', '+esc(x.lic):'')+'</a></figcaption></figure>';
+  }).join('');
+  ph.insertBefore(t,ph.firstChild);
+  if(list.length>1){
+    var ARW='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="PATH"></path></svg>';
+    var pv=document.createElement('button'),nx=document.createElement('button'),ct=document.createElement('span');
+    pv.type=nx.type='button';pv.className='nav pv';nx.className='nav nx';ct.className='count';
+    pv.setAttribute('aria-label','Foto anterior');nx.setAttribute('aria-label','Foto siguiente');
+    pv.innerHTML=ARW.replace('PATH','M9 2.500 4.500 7 9 11.500');nx.innerHTML=ARW.replace('PATH','M5 2.500 9.500 7 5 11.500');
+    function go(k){t.scrollBy({left:k*t.clientWidth,behavior:reduce?'auto':'smooth'});}
+    function upd(){ct.textContent=(Math.round(t.scrollLeft/Math.max(t.clientWidth,1))+1)+' / '+list.length;}
+    pv.addEventListener('click',function(){go(-1);});nx.addEventListener('click',function(){go(1);});
+    t.addEventListener('scroll',upd);upd();
+    ph.appendChild(pv);ph.appendChild(nx);ph.appendChild(ct);
+  }
+  Array.prototype.forEach.call(t.querySelectorAll('img'),function(im){im.addEventListener('error',function(){var f=im.closest('.sl');if(f)f.remove();});});
+}
 
 /* Regiones: c = tono intenso (país con destino), l = tono suave */
 var REG={
@@ -935,6 +999,7 @@ function openDest(id){
   drawArc();draw();
   centerSel();
   flyPlane();
+  loadPhotos(d).then(function(list){showPhotos(d,list);});
 }
 function centerSel(){
   if(!S.sel)return;
