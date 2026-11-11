@@ -505,6 +505,7 @@ function showPhotos(d,list){
     return '<figure class="sl"><img src="'+esc(x.src)+'" alt="'+esc(x.city?d.ciudad:d.uni)+'" loading="lazy" referrerpolicy="no-referrer"><figcaption>'+(x.city?esc(d.ciudad)+' · ':'')+'<a href="'+esc(x.href)+'" target="_blank" rel="noopener">'+esc(x.by||'Wikimedia Commons')+(x.lic?', '+esc(x.lic):'')+'</a></figcaption></figure>';
   }).join('');
   ph.insertBefore(t,ph.firstChild);
+  if(!mobile)centerSel();
   if(list.length>1){
     var ARW='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="PATH"></path></svg>';
     var pv=document.createElement('button'),nx=document.createElement('button'),ct=document.createElement('span');
